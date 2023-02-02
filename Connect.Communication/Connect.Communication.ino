@@ -52,11 +52,11 @@ void setup()
   }
   else
   {  
-    UdpPlugStatus.Init(5001);
-    UdpSensorData.Init(5002);
-    UdpSensorConfig.Init(5003);
-    UdpPlugCommand.Init(5000);  
-    UdpConnection.Init(5004);
+    UdpPlugCommand.Init(5001);  
+    UdpPlugStatus.Init(5002);
+    UdpSensorData.Init(5003);
+    UdpSensorConfig.Init(5004);
+    UdpConnection.Init(5005);
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
     PrintWifiStatus();              
