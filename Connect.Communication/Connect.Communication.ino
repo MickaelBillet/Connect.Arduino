@@ -12,7 +12,7 @@
 #include "F007th.h"
 #include "UdpConnect.h"
 
-static const int SENSORS_COUNT = 8;
+static const int SENSORS_COUNT = 10;
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;        // your network SSID (name)
@@ -24,10 +24,12 @@ System ArduinoSystem;
 
 Sensor* Sensors[SENSORS_COUNT];
 
-UdpConnect UdpSensorConfig;
+UdpConnect UdpSensorDataConfig;
+UdpConnect UdpSensorEventConfig;
 UdpConnect UdpPlugCommand;
 UdpConnect UdpPlugStatus;
 UdpConnect UdpSensorData;
+UdpConnect UdpSensorEvent;
 UdpConnect UdpConnection;
 
 CircBufferMacro(CirBuffer, 32);
@@ -44,7 +46,7 @@ void setup()
   pinMode(System::YELLOW, OUTPUT);
   pinMode(System::GREEN, OUTPUT);
 
-  NewRemoteReceiver::init(2, 2, ReceivePlugStatus);
+  NewRemoteReceiver::init(4, 2, ReceivePlugStatus);
   ipAddress = ArduinoSystem.Launch(ssid, pass);
   if (ipAddress == "")
   {
@@ -55,8 +57,10 @@ void setup()
     UdpPlugCommand.Init(5001);  
     UdpPlugStatus.Init(5002);
     UdpSensorData.Init(5003);
-    UdpSensorConfig.Init(5004);
+    UdpSensorDataConfig.Init(5004);
     UdpConnection.Init(5005);
+    UdpSensorEventConfig.Init(5006);
+    UdpSensorEvent.Init(5007);
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
     PrintWifiStatus();              
@@ -80,8 +84,14 @@ void loop()
   //Read the Sensor data periodically from the sensors and send to the WebServer
 	ArduinoSystem.ReadSensorsData(UdpSensorData);
 
-  //Read the Sensor configuration from the WebServer
-  ArduinoSystem.ReadSensorConfig(UdpSensorConfig, UdpConnection);
+  //Catch the Sensor event from the sensors and send to the WebServer
+  ArduinoSystem.ReadSensorsEvent(UdpSensorEvent);
+
+  //Read the Sensor Data configuration from the WebServer
+  ArduinoSystem.ReadSensorDataConfig(UdpSensorDataConfig, UdpConnection);
+
+   //Read the Sensor Event configuration from the WebServer
+  ArduinoSystem.ReadSensorEventConfig(UdpSensorEventConfig, UdpConnection);
 
   //Read the Plug command from the WebServer and send to the plug
   ArduinoSystem.ReceivePlugCommand(UdpPlugCommand);
