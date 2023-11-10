@@ -14,12 +14,15 @@
 
 static const int SENSORS_COUNT = 10;
 
+static const short NOT_STARTED = 0;
+static const short STARTING = 1;
+static const short STARTED = 2;
+
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 
-int status = WL_IDLE_STATUS;
-
+int status = NOT_STARTED;
 System ArduinoSystem;
 
 Sensor* Sensors[SENSORS_COUNT];
@@ -36,6 +39,7 @@ CircBufferMacro(CirBuffer, 32);
 
 void setup()
 {
+  status = STARTING;
   String ipAddress = "";
   // initialize serial communication
   Serial.begin(9600);    
@@ -63,7 +67,8 @@ void setup()
     UdpSensorEvent.Init(5007);
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
-    PrintWifiStatus();              
+    PrintWifiStatus();    
+    status = STARTED;          
   }
 }
 
@@ -101,7 +106,6 @@ void loop()
 void ReceivePlugStatus(NewRemoteCode receivedCode)
 {
 	Plug  plug;
-
 	String in_data = plug.SerializeStatus(receivedCode);
 
   if (in_data.length() > 0)
