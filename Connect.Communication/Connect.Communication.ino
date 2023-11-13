@@ -28,8 +28,7 @@ System ArduinoSystem;
 
 Sensor* Sensors[SENSORS_COUNT];
 
-UdpConnect UdpSensorDataConfig;
-UdpConnect UdpSensorEventConfig;
+UdpConnect UdpSensorConfig;
 UdpConnect UdpPlugCommand;
 UdpConnect UdpPlugStatus;
 UdpConnect UdpSensorData;
@@ -62,9 +61,8 @@ void setup()
     UdpPlugCommand.Init(5001);  
     UdpPlugStatus.Init(5002);
     UdpSensorData.Init(5003);
-    UdpSensorDataConfig.Init(5004);
+    UdpSensorConfig.Init(5004);
     UdpConnection.Init(5005);
-    UdpSensorEventConfig.Init(5006);
     UdpSensorEvent.Init(5007);
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
@@ -99,7 +97,7 @@ void loop()
   ArduinoSystem.ReadSensorsEvent(UdpSensorEvent);
 
   //Read the Sensor Data configuration from the WebServer
-  bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(UdpSensorDataConfig);
+  bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(UdpSensorConfig);
   if(receivedSensorConfig == true)
   {
     ArduinoSystem.SendSystemStatus(UdpConnection, "SensorConfig");
