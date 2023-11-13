@@ -11,6 +11,7 @@
 #include "Sensor.h"
 #include "F007th.h"
 #include "UdpConnect.h"
+#include "SerializerJson.h"
 
 static const int SENSORS_COUNT = 10;
 
@@ -68,13 +69,18 @@ void setup()
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
     PrintWifiStatus();    
-    status = STARTED;          
   }
 }
 
 void loop()
 { 
   String out_data;  
+
+  if (status == STARTING)
+  {
+        ArduinoSystem.SendSystemStatus(UdpConnection, "SystemStarted");
+        status = STARTED;
+  }
 
   ArduinoSystem.CheckReboot();
   F007th::Get()->ReadindProcess();
@@ -93,10 +99,11 @@ void loop()
   ArduinoSystem.ReadSensorsEvent(UdpSensorEvent);
 
   //Read the Sensor Data configuration from the WebServer
-  ArduinoSystem.ReadSensorDataConfig(UdpSensorDataConfig, UdpConnection);
-
-   //Read the Sensor Event configuration from the WebServer
-  ArduinoSystem.ReadSensorEventConfig(UdpSensorEventConfig, UdpConnection);
+  bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(UdpSensorDataConfig);
+  if(receivedSensorConfig == true)
+  {
+    ArduinoSystem.SendSystemStatus(UdpConnection, "SensorConfig");
+  }
 
   //Read the Plug command from the WebServer and send to the plug
   ArduinoSystem.ReceivePlugCommand(UdpPlugCommand);
@@ -105,8 +112,7 @@ void loop()
 //Interruption when we receive 433Mhz
 void ReceivePlugStatus(NewRemoteCode receivedCode)
 {
-	Plug  plug;
-	String in_data = plug.SerializeStatus(receivedCode);
+	String in_data = SerializerJson::SerializePlugStatus(receivedCode);
 
   if (in_data.length() > 0)
   {
