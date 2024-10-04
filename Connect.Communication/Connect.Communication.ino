@@ -1,6 +1,6 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
-#include <WiFiUdp.h>
+#include <WiFi101.h>
 
 #include "NewRemoteReceiver.h"
 #include "NewRemoteTransmitter.h"
@@ -10,7 +10,7 @@
 #include "CircularBuffer.h"
 #include "Sensor.h"
 #include "F007th.h"
-#include "UdpConnect.h"
+#include "WebSocketConnect.h"
 #include "SerializerJson.h"
 
 static const int SENSORS_COUNT = 10;
@@ -20,7 +20,7 @@ static const short STARTING = 1;
 static const short STARTED = 2;
 
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
-char ssid[] = SECRET_SSID;        // your network SSID (name)
+char ssid[] = SECRET_SSID;    // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 
 int status = NOT_STARTED;
@@ -28,12 +28,8 @@ System ArduinoSystem;
 
 Sensor* Sensors[SENSORS_COUNT];
 
-UdpConnect UdpSensorConfig;
-UdpConnect UdpPlugCommand;
-UdpConnect UdpPlugStatus;
-UdpConnect UdpSensorData;
-UdpConnect UdpSensorEvent;
-UdpConnect UdpConnection;
+WiFiClient wifi;
+WebSocketConnect Socket = WebSocketConnect(wifi, IP_SERVER, PORT);
 
 CircBufferMacro(CirBuffer, 32);
 
@@ -41,6 +37,7 @@ void setup()
 {
   status = STARTING;
   String ipAddress = "";
+  
   // initialize serial communication
   Serial.begin(9600);    
   Serial.println("setup");
@@ -58,12 +55,6 @@ void setup()
   }
   else
   {  
-    UdpPlugCommand.Init(5001);  
-    UdpPlugStatus.Init(5002);
-    UdpSensorData.Init(5003);
-    UdpSensorConfig.Init(5004);
-    UdpConnection.Init(5005);
-    UdpSensorEvent.Init(5007);
     ArduinoSystem.Initialize(ipAddress, Sensors);
     F007th::Get()->Initialize();
     PrintWifiStatus();    
@@ -72,45 +63,49 @@ void setup()
 
 void loop()
 { 
-  String out_data;  
-
-  if (status == STARTING)
+  Socket.Initialize("/ws");
+  while (Socket.connected())
   {
-        ArduinoSystem.SendSystemStatus(UdpConnection, "SystemStarted");
-        status = STARTED;
+    String out_data;  
+  
+    if (status == STARTING)
+    {
+      ArduinoSystem.SendSystemStatus(Socket, "SystemStarted");
+      status = STARTED;
+    }
+  
+    ArduinoSystem.CheckReboot();
+    F007th::Get()->ReadindProcess();
+  
+    //Send the Plug status to the Webserver (Interuption)
+    if(circ_bbuf_pop(&CirBuffer, &out_data) == 0)
+    {
+      ArduinoSystem.SendPlugStatus(Socket, out_data.c_str());
+      Serial.println("Status send : " + out_data);
+    }
+  
+    //Read the Sensor data periodically from the sensors and send to the WebServer
+    ArduinoSystem.ReadSensorsData(Socket);
+  
+    //Catch the Sensor event from the sensors and send to the WebServer
+    ArduinoSystem.ReadSensorsEvent(Socket);
+  
+    //Read the Sensor Data configuration from the WebServer
+    bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(Socket);
+    if(receivedSensorConfig == true)
+    {
+      ArduinoSystem.SendSystemStatus(Socket, "SensorConfig");
+    }
+  
+    //Read the Plug command from the WebServer and send to the plug
+    ArduinoSystem.ReceivePlugCommand(Socket);
   }
-
-  ArduinoSystem.CheckReboot();
-  F007th::Get()->ReadindProcess();
-
-  //Send the Plug status to the Webserver (Interuption)
-  if(circ_bbuf_pop(&CirBuffer, &out_data) == 0)
-  {
-    ArduinoSystem.SendPlugStatus(UdpPlugStatus, out_data.c_str());
-    Serial.println("Status send : " + out_data);
-  }
-
-  //Read the Sensor data periodically from the sensors and send to the WebServer
-  ArduinoSystem.ReadSensorsData(UdpSensorData);
-
-  //Catch the Sensor event from the sensors and send to the WebServer
-  ArduinoSystem.ReadSensorsEvent(UdpSensorEvent);
-
-  //Read the Sensor Data configuration from the WebServer
-  bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(UdpSensorConfig);
-  if(receivedSensorConfig == true)
-  {
-    ArduinoSystem.SendSystemStatus(UdpConnection, "SensorConfig");
-  }
-
-  //Read the Plug command from the WebServer and send to the plug
-  ArduinoSystem.ReceivePlugCommand(UdpPlugCommand);
 }
 
 //Interruption when we receive 433Mhz
 void ReceivePlugStatus(NewRemoteCode receivedCode)
 {
-  String in_data = SerializerJson::SerializePlugStatus(receivedCode);
+  String in_data = SerializerJson::SerializePlugStatus(System::PlugStatus, receivedCode);
   if (in_data.length() > 0)
   {
     circ_bbuf_push(&CirBuffer, in_data);
