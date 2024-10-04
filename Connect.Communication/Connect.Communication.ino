@@ -91,7 +91,7 @@ void loop()
   }
 
   //Read the Sensor data periodically from the sensors and send to the WebServer
-	ArduinoSystem.ReadSensorsData(UdpSensorData);
+  ArduinoSystem.ReadSensorsData(UdpSensorData);
 
   //Catch the Sensor event from the sensors and send to the WebServer
   ArduinoSystem.ReadSensorsEvent(UdpSensorEvent);
