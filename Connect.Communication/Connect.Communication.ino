@@ -1,6 +1,5 @@
 #include <SPI.h>
 #include <WiFiNINA.h>
-#include <WiFi101.h>
 
 #include "NewRemoteReceiver.h"
 #include "NewRemoteTransmitter.h"
@@ -19,6 +18,9 @@ static const short NOT_STARTED = 0;
 static const short STARTING = 1;
 static const short STARTED = 2;
 
+static const String SystemStarted = "SystemStarted";
+static const String SensorConfig = "SensorConfig";
+
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;    // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
@@ -29,7 +31,7 @@ System ArduinoSystem;
 Sensor* Sensors[SENSORS_COUNT];
 
 WiFiClient wifi;
-WebSocketConnect Socket = WebSocketConnect(wifi, IP_SERVER, PORT);
+WebSocketConnect Socket = WebSocketConnect(wifi, PORT, IP_SERVER);
 
 CircBufferMacro(CirBuffer, 32);
 
@@ -64,13 +66,13 @@ void setup()
 void loop()
 { 
   Socket.Initialize("/ws");
-  while (Socket.connected())
+  while (Socket.Connected())
   {
     String out_data;  
   
     if (status == STARTING)
     {
-      ArduinoSystem.SendSystemStatus(Socket, "SystemStarted");
+      ArduinoSystem.SendSystemStatus(Socket, SystemStarted);
       status = STARTED;
     }
   
@@ -94,7 +96,7 @@ void loop()
     bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(Socket);
     if(receivedSensorConfig == true)
     {
-      ArduinoSystem.SendSystemStatus(Socket, "SensorConfig");
+      ArduinoSystem.SendSystemStatus(Socket, SensorConfig);
     }
   
     //Read the Plug command from the WebServer and send to the plug
