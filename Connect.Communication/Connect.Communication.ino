@@ -31,7 +31,7 @@ System ArduinoSystem;
 Sensor* Sensors[SENSORS_COUNT];
 
 WiFiClient wifi;
-WebSocketConnect Socket = WebSocketConnect(wifi, PORT, IP_SERVER);
+WebSocketClient client = WebSocketClient(wifi, IP_SERVER, PORT);
 
 CircBufferMacro(CirBuffer, 32);
 
@@ -42,7 +42,6 @@ void setup()
   
   // initialize serial communication
   Serial.begin(9600);    
-  Serial.println("setup");
 
   // set the LED pin mode
   pinMode(System::RED, OUTPUT);      
@@ -58,6 +57,7 @@ void setup()
   else
   {  
     ArduinoSystem.Initialize(ipAddress, Sensors);
+    
     F007th::Get()->Initialize();
     PrintWifiStatus();    
   }
@@ -65,25 +65,26 @@ void setup()
 
 void loop()
 { 
+  WebSocketConnect Socket = WebSocketConnect(client);
   Socket.Initialize("/ws");
+
   while (Socket.Connected())
   {
     String out_data;  
-  
+
     if (status == STARTING)
     {
       ArduinoSystem.SendSystemStatus(Socket, SystemStarted);
       status = STARTED;
     }
-  
+
     ArduinoSystem.CheckReboot();
     F007th::Get()->ReadindProcess();
-  
+
     //Send the Plug status to the Webserver (Interuption)
     if(circ_bbuf_pop(&CirBuffer, &out_data) == 0)
     {
       ArduinoSystem.SendPlugStatus(Socket, out_data.c_str());
-      Serial.println("Status send : " + out_data);
     }
   
     //Read the Sensor data periodically from the sensors and send to the WebServer
@@ -102,6 +103,8 @@ void loop()
     //Read the Plug command from the WebServer and send to the plug
     ArduinoSystem.ReceivePlugCommand(Socket);
   }
+  delay(1000);
+  //asm volatile("jmp 0x00");
 }
 
 //Interruption when we receive 433Mhz
