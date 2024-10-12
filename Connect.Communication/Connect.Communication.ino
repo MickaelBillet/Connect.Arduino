@@ -66,7 +66,8 @@ void setup()
 void loop()
 { 
   WebSocketConnect Socket = WebSocketConnect(client);
-  Socket.Initialize("/ws");
+  Socket.Initialize("/ws-connect");
+  delay(100);
 
   while (Socket.Connected())
   {
@@ -103,8 +104,7 @@ void loop()
     //Read the Plug command from the WebServer and send to the plug
     ArduinoSystem.ReceivePlugCommand(Socket);
   }
-  delay(1000);
-  //asm volatile("jmp 0x00");
+  asm volatile("jmp 0x00");
 }
 
 //Interruption when we receive 433Mhz
