@@ -72,7 +72,7 @@ void loop()
 
     if (status == STARTING)
     {
-      ArduinoSystem.SendSystemStatus(Socket, System::SystemStarted);
+      ArduinoSystem.SendSystemStatus(Socket, System::SystemStartedOrder);
       status = STARTED;
     }
 
