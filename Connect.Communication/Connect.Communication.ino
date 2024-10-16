@@ -18,9 +18,6 @@ static const short NOT_STARTED = 0;
 static const short STARTING = 1;
 static const short STARTED = 2;
 
-static const String SystemStarted = "SystemStarted";
-static const String SensorConfig = "SensorConfig";
-
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
 char ssid[] = SECRET_SSID;    // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
@@ -66,7 +63,7 @@ void setup()
 void loop()
 { 
   WebSocketConnect Socket = WebSocketConnect(client);
-  Socket.Initialize("/ws-connect");
+  Socket.Initialize("/ws");
   delay(100);
 
   while (Socket.Connected())
@@ -75,7 +72,7 @@ void loop()
 
     if (status == STARTING)
     {
-      ArduinoSystem.SendSystemStatus(Socket, SystemStarted);
+      ArduinoSystem.SendSystemStatus(Socket, System::SystemStarted);
       status = STARTED;
     }
 
@@ -94,15 +91,7 @@ void loop()
     //Catch the Sensor event from the sensors and send to the WebServer
     ArduinoSystem.ReadSensorsEvent(Socket);
   
-    //Read the Sensor Data configuration from the WebServer
-    bool receivedSensorConfig = ArduinoSystem.ReadSensorConfig(Socket);
-    if(receivedSensorConfig == true)
-    {
-      ArduinoSystem.SendSystemStatus(Socket, SensorConfig);
-    }
-  
-    //Read the Plug command from the WebServer and send to the plug
-    ArduinoSystem.ReceivePlugCommand(Socket);
+    ArduinoSystem.ReadMessageFromWebServer(Socket);   
   }
   asm volatile("jmp 0x00");
 }
