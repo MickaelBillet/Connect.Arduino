@@ -99,7 +99,7 @@ void loop()
 //Interruption when we receive 433Mhz
 void ReceivePlugStatus(NewRemoteCode receivedCode)
 {
-  String in_data = SerializerJson::SerializePlugStatus(System::PlugStatus, receivedCode);
+  String in_data = SerializerJson::SerializePlugStatus(System::PlugStatusMsg, receivedCode);
   if (in_data.length() > 0)
   {
     circ_bbuf_push(&CirBuffer, in_data);
